@@ -17,7 +17,6 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-
 // Verify connection configuration
 transporter.verify((error, success) => {
   if (error) {
@@ -27,6 +26,7 @@ transporter.verify((error, success) => {
   }
 });
 
+// ===== FIXED: All email functions with Promise wrapper =====
 
 export const sendOrderConfirmation = async (orderData) => {
   try {
@@ -126,12 +126,23 @@ export const sendOrderConfirmation = async (orderData) => {
       `,
     };
 
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Order confirmation email sent:', result.messageId);
+    // ✅ FIXED: Wrap sendMail in a Promise
+    const result = await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error('❌ Error sending order confirmation email:', err);
+          reject(err);
+        } else {
+          console.log('✅ Order confirmation email sent:', info.messageId);
+          resolve(info);
+        }
+      });
+    });
+    
     return { success: true, messageId: result.messageId };
     
   } catch (error) {
-    console.error('❌ Error sending order confirmation email:', error);
+    console.error('❌ Error in sendOrderConfirmation:', error);
     throw new Error('Failed to send order confirmation email');
   }
 };
@@ -185,16 +196,26 @@ export const sendOrderStatusUpdate = async (orderData, newStatus) => {
       `,
     };
 
-    const result = await transporter.sendMail(mailOptions);
-    console.log('✅ Order status update email sent:', result.messageId);
+    // ✅ FIXED: Wrap sendMail in a Promise
+    const result = await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error('❌ Error sending order status update email:', err);
+          reject(err);
+        } else {
+          console.log('✅ Order status update email sent:', info.messageId);
+          resolve(info);
+        }
+      });
+    });
+    
     return { success: true, messageId: result.messageId };
     
   } catch (error) {
-    console.error('❌ Error sending order status update email:', error);
+    console.error('❌ Error in sendOrderStatusUpdate:', error);
     throw new Error('Failed to send order status update email');
   }
 };
-
 
 export const sendAdminNewOrderEmail = async (orderData) => {
   try {
@@ -209,7 +230,7 @@ export const sendAdminNewOrderEmail = async (orderData) => {
 
     const mailOptions = {
       from: `"${process.env.BRAND_NAME}" <${process.env.EMAIL_USER}>`,
-      to: process.env.ADMIN_EMAIL, // 🔥 ADMIN EMAIL
+      to: process.env.ADMIN_EMAIL,
       subject: `🛎️ New Order Received - #${_id.toString().slice(-8)}`,
       html: `
         <h2>🆕 New Order Received</h2>
@@ -241,72 +262,173 @@ export const sendAdminNewOrderEmail = async (orderData) => {
       `,
     };
 
-    const result = await transporter.sendMail(mailOptions);
-    console.log("✅ Admin new order email sent:", result.messageId);
+    // ✅ FIXED: Wrap sendMail in a Promise
+    const result = await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error("❌ Error sending admin email:", err);
+          reject(err);
+        } else {
+          console.log("✅ Admin new order email sent:", info.messageId);
+          resolve(info);
+        }
+      });
+    });
+
+    return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.error("❌ Error sending admin email:", error.message);
+    console.error("❌ Error in sendAdminNewOrderEmail:", error.message);
+    // Don't throw - we don't want to fail the order just because admin email failed
+    return { success: false, error: error.message };
   }
 };
 
+// ===== Enquiry Functions =====
 
-
-//enquirey 
-// ADMIN notification
 export const sendEnquiryEmailToAdmin = async (enquiry) => {
-  const mailOptions = {
-    from: `"${process.env.BRAND_NAME}" <${process.env.EMAIL_USER}>`,
-    to: process.env.ADMIN_EMAIL,
-    subject: "📩 New Customer Enquiry",
-    html: `
-      <h3>New Enquiry Received</h3>
-      <p><b>Name:</b> ${enquiry.name}</p>
-      <p><b>Phone:</b> ${enquiry.phone}</p>
-      <p><b>Email:</b> ${enquiry.email}</p>
-      <p><b>Type:</b> ${enquiry.enquiryType}</p>
-      <p><b>Message:</b> ${enquiry.message}</p>
-    `
-  };
+  try {
+    const mailOptions = {
+      from: `"${process.env.BRAND_NAME}" <${process.env.EMAIL_USER}>`,
+      to: process.env.ADMIN_EMAIL,
+      subject: "📩 New Customer Enquiry",
+      html: `
+        <h3>New Enquiry Received</h3>
+        <p><b>Name:</b> ${enquiry.name}</p>
+        <p><b>Phone:</b> ${enquiry.phone}</p>
+        <p><b>Email:</b> ${enquiry.email}</p>
+        <p><b>Type:</b> ${enquiry.enquiryType}</p>
+        <p><b>Message:</b> ${enquiry.message}</p>
+      `
+    };
 
-  await transporter.sendMail(mailOptions);
+    // ✅ FIXED: Wrap sendMail in a Promise
+    const result = await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error('❌ Error sending enquiry to admin:', err);
+          reject(err);
+        } else {
+          console.log('✅ Enquiry email sent to admin:', info.messageId);
+          resolve(info);
+        }
+      });
+    });
+
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error('❌ Error in sendEnquiryEmailToAdmin:', error);
+    return { success: false, error: error.message };
+  }
 };
 
-
-// CUSTOMER confirmation
 export const sendEnquiryConfirmationToCustomer = async (enquiry) => {
-  if (!enquiry.email) return;
+  if (!enquiry.email) return { success: false, message: 'No email provided' };
 
-  const mailOptions = {
-    from: `"${process.env.BRAND_NAME}" <${process.env.EMAIL_USER}>`,
-    to: enquiry.email,
-    subject: "✅ We received your enquiry",
-    html: `
-      <p>Hello ${enquiry.name},</p>
-      <p>We have received your enquiry and our team will contact you shortly.</p>
-      <p><b>Status:</b> Pending</p>
-      <br/>
-      <p>Thank you,<br/>${process.env.BRAND_NAME}</p>
-    `
-  };
+  try {
+    const mailOptions = {
+      from: `"${process.env.BRAND_NAME}" <${process.env.EMAIL_USER}>`,
+      to: enquiry.email,
+      subject: "✅ We received your enquiry",
+      html: `
+        <p>Hello ${enquiry.name},</p>
+        <p>We have received your enquiry and our team will contact you shortly.</p>
+        <p><b>Status:</b> Pending</p>
+        <br/>
+        <p>Thank you,<br/>${process.env.BRAND_NAME}</p>
+      `
+    };
 
-  await transporter.sendMail(mailOptions);
+    // ✅ FIXED: Wrap sendMail in a Promise
+    const result = await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error('❌ Error sending enquiry confirmation:', err);
+          reject(err);
+        } else {
+          console.log('✅ Enquiry confirmation sent:', info.messageId);
+          resolve(info);
+        }
+      });
+    });
+
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error('❌ Error in sendEnquiryConfirmationToCustomer:', error);
+    return { success: false, error: error.message };
+  }
 };
 
-
-// STATUS update email
 export const sendEnquiryStatusEmail = async (enquiry) => {
-  if (!enquiry.email) return;
+  if (!enquiry.email) return { success: false, message: 'No email provided' };
 
-  const mailOptions = {
-    from: `"${process.env.BRAND_NAME}" <${process.env.EMAIL_USER}>`,
-    to: enquiry.email,
-    subject: "📢 Enquiry Status Updated",
-    html: `
-      <p>Hello ${enquiry.name},</p>
-      <p>Your enquiry status has been updated:</p>
-      <h3>${enquiry.status.toUpperCase()}</h3>
-      <p>Thank you,<br/>${process.env.BRAND_NAME}</p>
-    `
-  };
+  try {
+    const mailOptions = {
+      from: `"${process.env.BRAND_NAME}" <${process.env.EMAIL_USER}>`,
+      to: enquiry.email,
+      subject: "📢 Enquiry Status Updated",
+      html: `
+        <p>Hello ${enquiry.name},</p>
+        <p>Your enquiry status has been updated:</p>
+        <h3>${enquiry.status.toUpperCase()}</h3>
+        <p>Thank you,<br/>${process.env.BRAND_NAME}</p>
+      `
+    };
 
-  await transporter.sendMail(mailOptions);
+    // ✅ FIXED: Wrap sendMail in a Promise
+    const result = await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error('❌ Error sending enquiry status email:', err);
+          reject(err);
+        } else {
+          console.log('✅ Enquiry status email sent:', info.messageId);
+          resolve(info);
+        }
+      });
+    });
+
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error('❌ Error in sendEnquiryStatusEmail:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// ===== Test Email Function =====
+
+export const testEmailConnection = async () => {
+  try {
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_USER, // Send to yourself
+      subject: 'Test Email from Render',
+      text: 'This is a test email to verify the connection works on production.'
+    };
+
+    // ✅ FIXED: Wrap sendMail in a Promise
+    const result = await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (err, info) => {
+        if (err) {
+          console.error('❌ Test email error:', err);
+          reject(err);
+        } else {
+          console.log('✅ Test email sent successfully:', info.messageId);
+          resolve(info);
+        }
+      });
+    });
+
+    return { 
+      success: true, 
+      message: 'Email sent successfully',
+      messageId: result.messageId 
+    };
+  } catch (error) {
+    console.error('❌ Test email failed:', error);
+    return { 
+      success: false, 
+      error: error.message,
+      details: 'Check if: 1) App password is correct 2) 2FA is enabled 3) Environment variables are set'
+    };
+  }
 };
