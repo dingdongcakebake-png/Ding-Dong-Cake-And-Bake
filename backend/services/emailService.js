@@ -5,24 +5,25 @@ dotenv.config();
 
 // Create transporter
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || "smtp-relay.brevo.com",          // smtp-relay.brevo.com
-  port: Number(process.env.EMAIL_PORT),  // 587
+  host: "smtp.gmail.com",
+  port: 587,
   secure: false,
   auth: {
-    user: process.env.EMAIL_USER || "apikey",        // apikey
-    pass: process.env.EMAIL_PASS ||"c8kFZy9TW3GJhQPn",        // Brevo API key
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
+
 // Verify connection configuration
-transporter.verify((error) => {
+transporter.verify((error, success) => {
   if (error) {
-    console.error("❌ Email service connection failed:", error);
+    console.error('❌ Email service connection failed:', error);
   } else {
-    console.log("✅ Email service is ready to send messages");
+    console.log('✅ Email service is ready to send messages');
   }
 });
 
