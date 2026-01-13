@@ -9,11 +9,19 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false, // must be false for 587
   auth: {
+<<<<<<< HEAD
     user: "apikey", // IMPORTANT: this must be exactly "apikey"
     pass: process.env.SENDGRID_API_KEY
   },
   debug: true,
   logger: true
+=======
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  },
+   debug: true,  
+    logger: true
+>>>>>>> a5937a0a1513f35a24950aa9afced23eeb46117b
 });
 
 // Verify connection configuration
