@@ -5,24 +5,26 @@ dotenv.config();
 
 // Create transporter
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  host: "smtp.sendgrid.net",
+  port: 587,
+  secure: false, // must be false for 587
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+    user: "apikey", // IMPORTANT: this must be exactly "apikey"
+    pass: process.env.SENDGRID_API_KEY
+  },
+  debug: true,
+  logger: true
 });
-
 
 // Verify connection configuration
 transporter.verify((error, success) => {
   if (error) {
-    console.error('❌ Email service connection failed:', error);
+    console.error("❌ SendGrid connection failed:", error);
   } else {
-    console.log('✅ Email service is ready to send messages');
+    console.log("✅ SendGrid is ready to send messages");
   }
 });
+
 
 // ===== FIXED: All email functions with Promise wrapper =====
 
